@@ -15,6 +15,7 @@ using StardewValley.Inventories;
 using StardewValley.ItemTypeDefinitions;
 using Object = StardewValley.Object;
 using StardewValley.GameData.Machines;
+using System.Reflection;
 #pragma warning disable IDE1006
 
 namespace ProducerFrameworkMod
@@ -23,7 +24,9 @@ namespace ProducerFrameworkMod
     internal class ObjectOverrides
     {
         [HarmonyPriority(Priority.First)]
-        internal static bool PerformObjectDropInAction(Object __instance, Item dropInItem, bool probe, Farmer who, bool returnFalseIfItemConsumed, ref bool __result)
+        internal static bool PerformObjectDropInAction(Object __instance,
+            Item dropInItem, bool probe, Farmer who,
+            bool returnFalseIfItemConsumed, ref bool __result)
         {
             if (__instance.isTemporarilyInvisible || dropInItem is not Object input)
                 return true;
@@ -97,7 +100,11 @@ namespace ProducerFrameworkMod
                                 RemoveItemsFromInventory(who, fuel.Item1, fuel.Item2);
                             }
 
-                            Object.ConsumeInventoryItem(who,input, outputConfig.RequiredInputStack ?? producerRule.InputStack);
+                            //  original
+                            //Object.ConsumeInventoryItem(who, input, outputConfig.RequiredInputStack ?? producerRule.InputStack);
+                            //  fixed android
+                            Android_Object_ConsumeInventoryItem(who, input, outputConfig.RequiredInputStack ?? producerRule.InputStack);
+
                             __result = !returnFalseIfItemConsumed;
                         }
                         else
@@ -119,10 +126,18 @@ namespace ProducerFrameworkMod
             return !failLocationCondition && !failSeasonCondition;
         }
 
+        static MethodInfo Object_ConsumeInventoryItem_Method = AccessTools.Method(
+            typeof(Object), nameof(Object.ConsumeInventoryItem));
+
+        static void Android_Object_ConsumeInventoryItem(Farmer who, Item drop_in, int amount)
+        {
+            Object_ConsumeInventoryItem_Method.Invoke(null, new object[] { who, drop_in, amount });
+        }
+
         private static bool RemoveItemsFromInventory(Farmer farmer, string index, int stack)
         {
             IInventory inventory = (Object.autoLoadFrom ?? farmer.Items);
-            if (farmer.getItemCountInList(inventory,index) >= stack)
+            if (farmer.getItemCountInList(inventory, index) >= stack)
             {
                 for (int index1 = 0; index1 < inventory.Count; ++index1)
                 {
@@ -236,7 +251,7 @@ namespace ProducerFrameworkMod
             LinkedListNode<CodeInstruction> linkedListNode = newInstructions.Find(codeInstruction);
             if (linkedListNode != null && codeInstruction != null)
             {
-                linkedListNode.Value = new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ObjectOverrides), "getScale", new Type[] {typeof(Object)}));
+                linkedListNode.Value = new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ObjectOverrides), "getScale", new Type[] { typeof(Object) }));
             }
 
             codeInstruction = newInstructions.LastOrDefault(c => c.opcode == OpCodes.Callvirt && c.operand?.ToString() == "Void Draw(Microsoft.Xna.Framework.Graphics.Texture2D, Microsoft.Xna.Framework.Rectangle, System.Nullable`1[Microsoft.Xna.Framework.Rectangle], Microsoft.Xna.Framework.Color, Single, Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Graphics.SpriteEffects, Single)");
@@ -244,7 +259,7 @@ namespace ProducerFrameworkMod
             if (linkedListNode != null && codeInstruction != null)
             {
                 newInstructions.AddBefore(linkedListNode, new CodeInstruction(OpCodes.Ldarg_0, null));
-                linkedListNode.Value = new CodeInstruction(OpCodes.Call, AccessTools.FirstMethod(typeof(ObjectOverrides), m=> m.Name == "DrawAnimation"));
+                linkedListNode.Value = new CodeInstruction(OpCodes.Call, AccessTools.FirstMethod(typeof(ObjectOverrides), m => m.Name == "DrawAnimation"));
             }
 
             return newInstructions;
@@ -252,7 +267,7 @@ namespace ProducerFrameworkMod
 
         public static Vector2 getScale(Object __instance)
         {
-            if(ProducerController.GetProducerConfig(__instance.QualifiedItemId) is { } producerConfig && __instance.MinutesUntilReady > 0 && __instance.heldObject.Value != null)
+            if (ProducerController.GetProducerConfig(__instance.QualifiedItemId) is { } producerConfig && __instance.MinutesUntilReady > 0 && __instance.heldObject.Value != null)
             {
                 if (producerConfig.DisableBouncingAnimationWhileWorking)
                 {
@@ -291,14 +306,14 @@ namespace ProducerFrameworkMod
                 if (producerConfig.ProducingAnimation is { } producingAnimation && producer.MinutesUntilReady > 0 && producerConfig.CheckSeasonCondition(Game1.currentLocation) && producerConfig.CheckWeatherCondition() && producerConfig.CheckCurrentTimeCondition())
                 {
                     List<int> animationList;
-                    if (producingAnimation.AdditionalAnimationsId.ContainsKey(producer.heldObject.Value.ItemId)) 
+                    if (producingAnimation.AdditionalAnimationsId.ContainsKey(producer.heldObject.Value.ItemId))
                     {
                         animationList = producingAnimation.AdditionalAnimationsId[producer.heldObject.Value.ItemId];
-                    } 
+                    }
                     else if (producingAnimation.AdditionalAnimationsId.ContainsKey(producer.heldObject.Value.Category.ToString()))
                     {
                         animationList = producingAnimation.AdditionalAnimationsId[producer.heldObject.Value.Category.ToString()];
-                    } 
+                    }
                     else
                     {
                         animationList = producingAnimation.RelativeFrameIndex;
@@ -306,7 +321,7 @@ namespace ProducerFrameworkMod
                     if (animationList.Any())
                     {
                         int frame = animationList[((Game1.ticks + GetLocationSeed(producer.TileLocation)) % (animationList.Count * producingAnimation.FrameInterval)) / producingAnimation.FrameInterval];
-                        spriteBatch.Draw(texture, destinationRectangle, new Rectangle?(Object.getSourceRectForBigCraftable(texture,producer.ParentSheetIndex + frame)), color, rotation, origin, effects, layerDepth);
+                        spriteBatch.Draw(texture, destinationRectangle, new Rectangle?(Object.getSourceRectForBigCraftable(texture, producer.ParentSheetIndex + frame)), color, rotation, origin, effects, layerDepth);
                         return;
                     }
                 }
@@ -328,13 +343,13 @@ namespace ProducerFrameworkMod
                     if (animationList.Any())
                     {
                         int frame = animationList[((Game1.ticks + GetLocationSeed(producer.TileLocation)) % (animationList.Count * readyAnimation.FrameInterval)) / readyAnimation.FrameInterval];
-                        spriteBatch.Draw(texture, destinationRectangle, new Rectangle?(Object.getSourceRectForBigCraftable(texture,producer.ParentSheetIndex + frame)), color, rotation, origin, effects, layerDepth);
+                        spriteBatch.Draw(texture, destinationRectangle, new Rectangle?(Object.getSourceRectForBigCraftable(texture, producer.ParentSheetIndex + frame)), color, rotation, origin, effects, layerDepth);
                         return;
                     }
                 }
             }
-            spriteBatch.Draw(texture,destinationRectangle,sourceRectangle,color,rotation,origin,effects,layerDepth);
-            
+            spriteBatch.Draw(texture, destinationRectangle, sourceRectangle, color, rotation, origin, effects, layerDepth);
+
         }
 
         private static int GetLocationSeed(Vector2 tileLocation)
@@ -419,12 +434,13 @@ namespace ProducerFrameworkMod
                     {
                         if (ProducerController.GetProducerItem(__instance.QualifiedItemId, null) is { } producerRule)
                         {
-                            try { 
+                            try
+                            {
                                 if (!producerConfig.CheckLocationCondition(who.currentLocation))
                                 {
                                     throw new RestrictionException(DataLoader.Helper.Translation.Get("Message.Condition.Location"));
                                 }
-                                else if(producerConfig.CheckSeasonCondition(who.currentLocation))
+                                else if (producerConfig.CheckSeasonCondition(who.currentLocation))
                                 {
                                     __result = ProducerRuleController.ProduceOutput(producerRule, __instance, (i, q) => false, who, who.currentLocation, producerConfig) != null;
                                 }
@@ -471,7 +487,7 @@ namespace ProducerFrameworkMod
                 {
                     if (ProducerController.GetProducerItem(__instance.QualifiedItemId, null) is ProducerRule producerRule)
                     {
-                        if (!producerConfig.CheckSeasonCondition(location) || ! producerConfig.CheckLocationCondition(location))
+                        if (!producerConfig.CheckSeasonCondition(location) || !producerConfig.CheckLocationCondition(location))
                         {
                             ProducerRuleController.ClearProduction(__instance, location);
                             return false;
@@ -507,10 +523,10 @@ namespace ProducerFrameworkMod
 
         internal static bool LoadDisplayName(Object __instance, ref string __result)
         {
-            if (__instance.GetCustomName() is { } customName && !__instance.preserve.Value.HasValue && __instance.ParentSheetIndex != 463 && __instance.ParentSheetIndex != 464 && __instance.ParentSheetIndex != 340 )
+            if (__instance.GetCustomName() is { } customName && !__instance.preserve.Value.HasValue && __instance.ParentSheetIndex != 463 && __instance.ParentSheetIndex != 464 && __instance.ParentSheetIndex != 340)
             {
                 string translation = customName;
-                
+
                 if (ItemRegistry.GetData(__instance.QualifiedItemId) is { } instanceData && instanceData.InternalName != __instance.Name)
                 {
                     if (translation.Contains("{outputName}"))
@@ -523,7 +539,7 @@ namespace ProducerFrameworkMod
                     __result = __instance.Name;
                     return false;
                 }
-                
+
                 if (translation.Contains("{inputName}"))
                 {
                     if (__instance.preservedParentSheetIndex.Value == "-1")

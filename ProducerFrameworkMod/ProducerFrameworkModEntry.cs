@@ -17,10 +17,12 @@ namespace ProducerFrameworkMod
         {
             ModMonitor = Monitor;
             Helper = helper;
-            
+
             helper.Events.GameLoop.GameLaunched += OnGameLaunched;
-            helper.Events.GameLoop.UpdateTicking += OnGameLoopOnUpdateTicking ;
+            helper.Events.GameLoop.UpdateTicking += OnGameLoopOnUpdateTicking;
             helper.Events.GameLoop.SaveLoaded += DataLoader.LoadContentPacks;
+
+            Console.WriteLine("android version by NRTnarathip");
         }
 
         private void OnGameLoopOnUpdateTicking(object sender, UpdateTickingEventArgs args)
@@ -56,7 +58,7 @@ namespace ProducerFrameworkMod
                 original: AccessTools.Method(typeof(SObject), nameof(SObject.checkForAction)),
                 prefix: new HarmonyMethod(typeof(ObjectOverrides), nameof(ObjectOverrides.checkForActionPrefix)),
                 postfix: new HarmonyMethod(typeof(ObjectOverrides), nameof(ObjectOverrides.checkForActionPostfix))
-            ); 
+            );
             harmony.Patch(
                 original: AccessTools.Method(typeof(SObject), nameof(SObject.minutesElapsed)),
                 prefix: new HarmonyMethod(typeof(ObjectOverrides), nameof(ObjectOverrides.minutesElapsedPrefix)),
@@ -69,9 +71,9 @@ namespace ProducerFrameworkMod
             harmony.Patch(
                 original: AccessTools.Method(typeof(SObject), nameof(SObject.DayUpdate)),
                 prefix: new HarmonyMethod(typeof(ObjectOverrides), nameof(ObjectOverrides.DayUpdate))
-            ); 
+            );
             harmony.Patch(
-                original: AccessTools.Method(typeof(SObject), nameof(SObject.draw), new Type[]{typeof(SpriteBatch),typeof(int), typeof(int), typeof(float)}),
+                original: AccessTools.Method(typeof(SObject), nameof(SObject.draw), new Type[] { typeof(SpriteBatch), typeof(int), typeof(int), typeof(float) }),
                 transpiler: new HarmonyMethod(typeof(ObjectOverrides), nameof(ObjectOverrides.draw_Transpiler))
             );
             harmony.Patch(
